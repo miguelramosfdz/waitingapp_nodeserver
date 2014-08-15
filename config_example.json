@@ -1,0 +1,11 @@
+{
+    "serialize_key" : "",
+    "serialize_secret" : "",
+
+    "mongo_string" : "",
+
+    "gcm_sender_id" : "",
+
+    "stripe_api_key" : ""
+
+}

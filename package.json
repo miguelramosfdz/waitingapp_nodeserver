@@ -1,0 +1,31 @@
+{
+    "name": "wehicle-api",
+    "description": "Wehicle",
+    "version": "1.0.0",
+    "private": true,
+    "engine" : "0.10.x",
+    "dependencies": {
+        "debug" : "*",
+        "express": "3.x",
+        "jade" : "*",
+        "mongojs" : "*",
+        "mongoose" : "3.8.x",
+        "mongoose-post-find" : "0.0.2",
+        "node-gcm" : "*",
+        "q" : "*",
+        "supervisor" : "*",
+        "underscore" : "*",
+        "sendgrid" : "*",
+        "moment" : "2.5.x",
+	    "bcrypt" : "*",
+        "bcrypt-nodejs" : "*",
+        "stripe" : "2.4.x",
+        "balanced-official" : "0.3.x",
+        "request" : "2.x.x",
+        "carvoyant" : "git://github.com/nicholasareed/carvoyant.git#patch-1",
+        "apn" : "1.4.x",
+        "serializer" : "*",
+        "node-transloadit" : "0.0.4",
+        "nconf" : "0.6.x"
+    }
+}
