@@ -1,7 +1,7 @@
 
 // Node-gcm (Google Cloud Messaging)
 var gcm = require('node-gcm');
-var gcm_sender = new gcm.Sender('AIzaSyCseqXBYalWBoGdEwRrV4l6GtUqKmRs3gM');
+var gcm_sender = new gcm.Sender(config.get('gcm_sender_api_key')); // registered to nicholas.a.reed@gmail.com
 
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema,
@@ -31,9 +31,17 @@ var pushModel = {
 
 		if(user.toString().length == 24){
 			// Need to get the user
+			if(ObjectId(user.toString())){
+				user = ObjectId(user.toString());
+			}
 			m.User.findOne({_id: user}, function(err, user){
 				if(err){
 					console.error(err);
+					userDef.reject();
+					return;
+				}
+				if(!user){
+					console.error('no good user object', user);
 					userDef.reject();
 					return;
 				}
@@ -45,10 +53,14 @@ var pushModel = {
 
 		console.log('user', user);
 
-		userDef.promise.then(function(User){
+		userDef.promise
+		.fail(function(){
+			console.error('FAILED PUSH');
+		})
+		.then(function(User){
 			// Got the User
 			// - get their Push Setting
-
+			console.log({user_id: User});
 			m.PushSetting.findOne({user_id: User._id}, function(err, PushSetting){
 				if(err){
 					console.error('Failed PushSetting in push_notification.js');
@@ -166,16 +178,30 @@ var pushModel = {
 			    console.log('Error is: %s', errorNum);
 			    console.log("Note " + notification);
 			}
-			var options = {
-			    gateway: 'gateway.sandbox.push.apple.com', // this URL is different for Apple's Production Servers and changes when you go to production
-			    errorCallback: errorCallback,
-			    cert: './certs/dev_cert.pem',                 
-			    key:  './certs/dev_key.pem',                 
-			    passphrase: 'uludev83',
-			    port: 2195,                       
-			    enhanced: true,                   
-			    cacheLength: 100                  
-			};
+			if(config.get('ios_push_notification_mode') == 'prod'){
+				options = {
+				    gateway: 'gateway.push.apple.com', // this URL is different for Apple's Production Servers and changes when you go to production
+				    errorCallback: errorCallback,
+				    cert: './certs/prod_cert.pem',
+				    key:  './certs/prod_key.pem',
+				    passphrase: config.get('apn_prod_key_password'),
+				    port: 2195,                       
+				    enhanced: true,                   
+				    cacheLength: 100                  
+				};
+			} else {
+				console.log('SANDBOX APN');
+				options = {
+				    gateway: 'gateway.sandbox.push.apple.com', // this URL is different for Apple's Production Servers and changes when you go to production
+				    errorCallback: errorCallback,
+				    cert: './certs/dev_cert.pem',
+				    key:  './certs/dev_key.pem',
+				    passphrase: config.get('apn_dev_key_password'),
+				    port: 2195,                       
+				    enhanced: true,                   
+				    cacheLength: 100                  
+				};
+			}
 
 			var apnsConnection = new apn.Connection(options);
 			apnsConnection.sendNotification(note);
@@ -208,7 +234,7 @@ var pushModel = {
 		var defer = Q.defer();
 
 		data = data || {};
-		collapseKey = collapseKey || 'App Notifications';
+		collapseKey = collapseKey || config.get('app_name') + ' Notifications';
 		timeToLive = timeToLive || 180;
 		numRetries = numRetries || 3;
 
@@ -272,5 +298,5 @@ var pushModel = {
 
 };
 
-exports.pushModel = pushModel;
+exports.Model = pushModel;
 

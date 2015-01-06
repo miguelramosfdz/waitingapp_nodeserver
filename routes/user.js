@@ -6,10 +6,97 @@ var _ 		= require('underscore'),
 	ObjectID = require('mongojs').ObjectId,
 	serializer = require('serializer'),
 	request = require('request'),
-	default_serializer = serializer.createSecureSerializer('32f9s8fdhf23f', 'sdf9838nf8hsdfh823fmsdjfj'); // encryption key, signing key
+	async = require('async'),
+	crypto = require('crypto'),
+	default_serializer = serializer.createSecureSerializer(config.get('serialize_key'), config.get('serialize_secret')); // encryption key, signing key
+
+var FB = require('fb');
+
+var google = require('googleapis');
+var plus = google.plus('v1');
+var OAuth2 = google.auth.OAuth2;
 
 module.exports = function(app) {
   
+	// PUBLIC
+	app.get('/u/:user_id', function(req, res) {
+		console.log("Public User Profile");
+
+		// Remove user email/password/etc from response
+
+		var user_id = req.params.user_id;
+
+		// Get all my player id's too
+		// - easier than asking if I belong to everything
+		m.User.findOne({
+			_id: ObjectID(user_id)
+		})
+		.populate('profilephoto')
+		.exec(function(err, User){
+			if(err){
+				console.log('Err: unable to find user');
+				res.status(500);
+				res.json(false);
+				return;
+			}
+
+			console.log('Got user');
+			
+			if(!User){
+				res.status(404);
+				res.json(false);
+				return;
+			}
+
+			var tmpUser = User.toJSON();
+
+			var allowed = [
+				'_id',
+				// 'username',
+				'profilephoto',
+				'profile',
+				'admin'
+			];
+
+			var returnObj = {};
+			_.each(allowed, function(key){
+				if(tmpUser[key] != undefined){
+					returnObj[key] = tmpUser[key];
+				}
+			});
+
+			// Get the user's media
+			var mediaConditions = {
+				user_id: user_id,
+				active: true
+			};
+			m.Media.find(mediaConditions)
+			.exec(function(err, media){
+				if(err){
+					errorhandler(err, res);
+					return;
+				}
+
+				console.log(media);
+
+				// Render User+Media
+				res.render("user", { 
+					pageTitle: config.get('app_name'), 
+					user: User,
+					media: media
+				});
+			});
+			
+		});
+
+		
+
+	});
+
+
+
+	// API
+
 	app.get('/me', function(req, res) {
 		console.log("Simple info about the the logged-in user");
 
@@ -24,6 +111,25 @@ module.exports = function(app) {
 			});
 	});
 
+	app.post('/user/testpush', function(req, res) {
+		checkUserAuth(req, res)
+			.then(function(user){
+				// Add feedback
+
+				console.log('Triggering a Push Notification');
+				setTimeout(function(){
+					m.PushNotification.pushToUser(user._id, {
+						ios_title: 'Testing Push Notification',
+						title: 'Testing Push Notification',
+						message: 'Message Body Here',
+						payload: {type: 'testpush'}
+					}, 'testpush', {});
+				},5000);
+
+				res.json(true);
+
+			});
+	});
 
 	app.get('/user/profile/:user_id', function(req, res) {
 		console.log("Returning User Profile");
@@ -37,6 +143,7 @@ module.exports = function(app) {
 				m.User.findOne({
 					_id: ObjectID(req.params.user_id)
 				})
+				.populate('profilephoto')
 				.exec(function(err, User){
 					if(err){
 						console.log('Err: unable to find user');
@@ -51,7 +158,8 @@ module.exports = function(app) {
 						'_id',
 						'username',
 						'profilephoto',
-						'profile'
+						'profile',
+						'admin'
 					];
 
 					var returnObj = {};
@@ -77,26 +185,29 @@ module.exports = function(app) {
 			.then(function(user){
 				// Remove user email/password/etc from response
 
-				var allowed = [
-					'_id',
-					'email',
-					'password',
-					'friends',
-					'username',
-					'profilephoto',
-					'profile',
-					'android',
-					'ios',
-					'flags'
-				];
+				user.populate('profilephoto',function(){
+					var allowed = [
+						'_id',
+						'email',
+						'admin',
+						// 'password',
+						// 'friends',
+						'username',
+						'profilephoto',
+						'profile',
+						'android',
+						'ios',
+						'flags'
+					];
 
-				var returnObj = {};
-				_.each(allowed, function(key){
-					if(user[key] != undefined){
-						returnObj[key] = user[key]; // maybe undefined?
-					}
-				});
-				res.json(returnObj);
+					var returnObj = {};
+					_.each(allowed, function(key){
+						if(user[key] != undefined){
+							returnObj[key] = user[key]; // maybe undefined?
+						}
+					});
+					res.json(returnObj);
+				})
 
 			});
 	});
@@ -156,7 +267,8 @@ module.exports = function(app) {
 
 				var default_flags = {
 					'add/things' : false,
-					'highlights/home': false
+					'highlights/home': false,
+					'localinvite/home/v/1' : false
 				};
 
 				var body = req.body;
@@ -277,20 +389,174 @@ module.exports = function(app) {
 	app.post('/forgot', function(req, res) {
 		console.log("Forgot password request");
 
-		// request.post('https://wehicleapp.com/forgot/alternate', {form: {email: req.body.email, more: "here"}},function (err, response, body) {
-		//   if (!err && response.statusCode == 200) {
-		//     // console.log(body) // Print the google web page.
-		//   }
-		//   console.log(err);
-		//   console.log('body', body);
-		//   console.log(typeof body);
-		//   res.json({
-		//   	complete: true,
-		//   	msg: body
-		//   });
-		// })
-		
 
+		// req.assert('email', 'Please enter a valid email address.').isEmail();
+
+		// var errors = req.validationErrors();
+		var errors = null;
+
+		// if (errors) {
+		//   req.flash('errors', errors);
+		//   return res.redirect('/forgot');
+		// }
+
+		async.waterfall([
+			function(done) {
+				console.log('crypto');
+				crypto.randomBytes(16, function(err, buf) {
+					var token = buf.toString('hex');
+					done(err, token);
+				});
+			},
+			function(token, done) {
+				console.log('find user');
+				  m.User.findOne({ email: req.body.email.toLowerCase() }, function(err, user) {
+				    if (!user) {
+				      // req.flash('errors', { msg: 'No account with that email address exists.' });
+				      // res.status(401);
+				      // res.json({
+				      // 	msg: "No account with that email address exists"
+				      // });
+
+				  		// No user found, trying not to leak additional information too easily
+						res.json({
+							noemail: true,
+							complete: true
+						});
+
+				      return;
+				      // return res.redirect('/forgot');
+				    }
+
+				    user.resetPasswordToken = token;
+				    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+				    user.save(function(err) {
+				      done(err, token, user);
+				    });
+				  });
+			},
+			function(token, user, done) {
+
+				console.log('send email');
+
+				// Send reset email
+				models.email.send({
+					to: user.email,
+					from: config.get('admin_email_from'),
+					subject: 'Reset your password on ' + config.get('app_name'),
+					text: 'You are receiving this email because you (or someone else) have requested the reset of the password for your account.\n\n' +
+				      'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
+				      config.get('server_root') + 'reset/' + token + '\n\n' +
+				      'If you did not request this, please ignore this email and your password will remain unchanged.\n'
+				});
+
+				console.log('reset url: ',config.get('server_root') + 'reset/' + token);
+
+				done(null, 'done');
+
+			}
+		], function(err) {
+			console.log('done');
+			if (err){
+				console.error(err);
+				res.status(500);
+				res.json(false);
+				return;
+			};
+			// res.send("ok");
+			// res.redirect('/forgot');
+			res.json({
+				complete: true
+			});
+		});
+
+	});
+
+	
+	app.get('/reset/:token', function(req, res) {
+
+	  m.User
+	    .findOne({ resetPasswordToken: req.params.token })
+	    .where('resetPasswordExpires').gt(Date.now())
+	    .exec(function(err, user) {
+	      if (!user) {
+	        res.send('Password reset token is invalid or has expired.');
+	        return;
+	      }
+	      res.render('reset', {
+	        title: 'Password Reset'
+	      });
+	    });
+	});
+
+
+	app.post('/reset/:token', function(req, res) {
+
+	  async.waterfall([
+	    function(done) {
+	      m.User
+	        .findOne({ resetPasswordToken: req.params.token })
+	        .where('resetPasswordExpires').gt(Date.now())
+	        .exec(function(err, user) {
+	          if (!user) {
+	            req.flash('errors', { msg: 'Password reset token is invalid or has expired.' });
+	            return res.redirect('back');
+	          }
+
+	          user.password = req.body.password;
+	          user.resetPasswordToken = undefined;
+	          user.resetPasswordExpires = undefined;
+
+	          user.save(function(err) {
+	            if (err) return next(err);
+	            done(err, user);
+	            // req.logIn(user, function(err) {
+	            //   done(err, user);
+	            // });
+	          });
+	        });
+	    },
+	    function(user, done) {
+
+			models.email.send({
+				to: user.email,
+				from: config.get('admin_email_from'),
+				subject: 'Your '+ config.get('app_name') +' password has been changed',
+				text: 'Hello,\n\n' +
+          			'This is a confirmation that the password for your account ' + user.email + ' has just been changed.\n'
+			});
+
+			done(null);
+
+	      // var smtpTransport = nodemailer.createTransport('SMTP', {
+	      //   service: 'SendGrid',
+	      //   auth: {
+	      //     user: secrets.sendgrid.user,
+	      //     pass: secrets.sendgrid.password
+	      //   }
+	      // });
+	      // var mailOptions = {
+	      //   to: user.email, //'nick@thehandyapp.com',
+	      //   from: 'founders@wehicleapp.com',
+	      //   subject: 'Your Wehicle password has been changed',
+	      //   text: 'Hello,\n\n' +
+	      //     'This is a confirmation that the password for your account ' + user.email + ' has just been changed.\n'
+	      // };
+	      // smtpTransport.sendMail(mailOptions, function(err) {
+	      //   res.send('Success! Your password has been changed.');
+	      //   done(err);
+	      // });
+	    }
+	  ], function(err) {
+	    if (err){
+	    	console.error(err);
+	    	res.send('Failed updating your password');
+	    	return;
+	    }
+	    res.send('Success! Your password has been changed.');
+
+	  });
 	});
 
 
@@ -386,6 +652,9 @@ module.exports = function(app) {
 				if(body.hasOwnProperty('profile_name')){
 					User.profile.name = body.profile_name;
 				}
+				if(body.hasOwnProperty('profile_bio')){
+					User.profile.bio = body.profile_bio;
+				}
 
 				User.save(function(err, newUser){
 					if(err){
@@ -416,7 +685,7 @@ module.exports = function(app) {
 					indicator: req.body.indicator
 				});
 
-				Feedback.save(function(err, bank){
+				Feedback.save(function(err, newFeedback){
 					if(err){
 						console.log('Failed saving Feedback');
 						res.status(500);
@@ -425,7 +694,27 @@ module.exports = function(app) {
 					}
 
 					// Saved Feedback from user
-					res.json(bank);
+					res.json(newFeedback);
+
+
+
+					// Push Notify Nick
+					m.User.findOne({email: config.get('admin_email_from')}, function(err, Nick){
+						console.log('Found NICK');
+						if(err){
+							console.log('No Nick');
+							console.error(err);
+							return;
+						}
+						m.PushNotification.pushToUser(user._id, {
+							ios_title: 'New feedback from: ' + user.email,
+							title: 'New feedback from: ' + user.email,
+							message: user.email,
+							payload: {type: 'new_feedback', id: newFeedback._id}
+						}, 'new_feedback', {});
+
+					});
+
 
 				});
 
@@ -455,94 +744,32 @@ module.exports = function(app) {
 	    	return;
 	    }
 
+	    // Check username
+	    var username,
+	    	username_lowercase;
+	    if(req.body.username){
+	    	username = req.body.username;
+	    	username_lowercase = req.body.username.toString().toLowerCase();
+	    }
 
 	    console.log('Email OK');
 
 	    // Create account (it will fail if the email already exists)
 
-	    try {
-			var User = new m.User({
-				profile: {
-					name: profile_name
-				},
-				email: email,
-				password: password,
-				// role: "player",
-				active: 1
-			});
-		} catch(err){
-			console.error(err);
-			res.status(500);
-			return;
-		}
+	    var data = {
+			profile: {
+				name: profile_name
+			},
+			email: email,
+			password: password,
 
-		try {
+			username: username,
+			username_lowercase: username_lowercase,
 
-			User.save(function(err, newUser){
-				if(err){
-					console.log('Failed creating user');
-					console.log(err.code);
-					if(err.code == 11000){
-						// Duplicate key error
-						res.json({
-							complete: false,
-							msg: 'duplicate'
-						});
-						return;
-					}
-					res.json({
-						complete: false,
-						msg: 'unknown'
-					});
-					return;
-				}
+			active: 1
+		};
 
-				console.log('User has signed up');
-				console.log(newUser);
-				console.log(email);
-
-				// tell Nick about the signup
-				models.email.send({
-					to: 'nicholas.a.reed@gmail.com',
-					from: 'founders@wehicleapp.com',
-					subject: 'New InternalApp Signup',
-					text: email + ' just signed up for InternalApp!'
-				});
-
-				// Return to user
-				res.json({
-					complete: true,
-					email: email
-				});
-
-				
-				// Create default Push Settings for user
-				var PushSetting = new m.PushSetting({
-					user_id : newUser._id
-				});
-				// Insert
-				PushSetting.save(function(err, newPushSetting){
-					if(err){
-						console.error('PushSetting error');
-						console.error(err);
-						return;
-					}
-
-					// Saved PushSetting OK
-					console.log('Saved PushSetting');
-
-				});
-
-
-
-			});
-		
-		} catch(err2){
-			console.log('failed err2');
-			console.error(err2);
-			res.status(500);
-			res.json(false);
-		}
+		m.User.signup(data, res);
 			
 	});
 
@@ -553,8 +780,8 @@ module.exports = function(app) {
 			
 	});
 
-	app.post('/login/2', function(req, res) {
-		console.log("Login v2");
+	app.post('/login', function(req, res) {
+		console.log("Login");
 
 		var body = _.clone(req.body);
 		if(body.hasOwnProperty('email') && body.hasOwnProperty('password')){
@@ -595,7 +822,9 @@ module.exports = function(app) {
 						// Return token to user
 						res.json({
 							code: 200,
-							token: access_token
+							_id: User._id,
+							token: access_token,
+							websocket: models.Firebase.tokenGenerator.createToken({uid: User._id.toString()},{expires: moment().add(1,'year').unix()})
 						});
 
 					});
@@ -609,17 +838,296 @@ module.exports = function(app) {
 			
 	});
 
-	app.post('/login', function(req, res) {
-		console.log("Login");
-		checkUserAuth(req, res)
-			.then(function(user){
-				if(user){
-					res.json(true);
-				} else {
-					res.json(401);
-					res.json('Invalid user');
+	app.post('/login/facebook', function(req, res) {
+		console.log("Login with Facebook token");
+
+		var body = _.clone(req.body);
+
+		FB.api('me', {
+		    // client_id: config.get('fb_app_id'),
+		    appSecret: config.get('fb_app_secret'),
+		    // grant_type: 'fb_exchange_token',
+		    access_token: body.token
+		}, function (fbRes) {
+		    if(!fbRes || fbRes.error) {
+		        console.log(!fbRes ? 'error occurred' : fbRes.error);
+		        errorhandler(fbRes, res);
+		        return;
+		    }
+
+		    // Get our facebook user id
+			m.User.findOne(
+				{ 
+					'$or' : [
+						{'fb_user.id': fbRes.id},
+						{email: fbRes.email}
+					]
+					// 'password' : body.password.toString()
+				},
+				function(err, User) {
+					if(err){
+						errorhandler(err, res);
+						return;
+					}
+
+					// Found any existing user?
+					// - if NO: new signup! 
+					if(!User){
+					    var data = {
+							profile: {
+								name: fbRes.name
+							},
+
+							fb_token: body.token, // not storing expiration at the moment?
+							fb_user: fbRes,
+							fb_friends: null,
+
+							email: fbRes.email.toLowerCase(),
+							password: 'facebook', // bcrypt will never match this
+
+							active: 1
+						};
+
+						// Signup
+						m.User.signup(data, res);
+
+						// Check Facebook friends
+						// - auto-friend any FB friends already on the service
+						// - 
+
+						return;
+					}
+
+
+					// Already registered, log them in easily
+
+					// Build token
+					var access_token = models.serializer.stringify([
+						User._id, 
+						+new Date, 
+						'v0.1']);
+
+					// Return token to user
+					res.json({
+						code: 200,
+						_id: User._id,
+						token: access_token,
+						websocket: models.Firebase.tokenGenerator.createToken({uid: User._id.toString()},{expires: moment().add(1,'year').unix()})
+					});
+
+					// Update the facebook user
+					// - update their facebook friend list as well
+					m.User.updateFacebookFriends(User, body.token);
+
 				}
-			});
+			);
+
+		});
+			
+	});
+
+// var request = require('request');
+// // kid = the key id specified in the token
+// function getGoogleCerts(kid, callback) {
+//     request({uri: 'https://www.googleapis.com/oauth2/v1/certs'}, function(err, response, body){
+//         if(err && response.statusCode !== 200) {
+//             err = err || "error while retrieving the google certs";
+//             console.log(err);
+//             callback(err, {})
+//         } else {
+//             var keys = JSON.parse(body);
+//             callback(null, keys[kid]);
+//         }
+
+//     });
+// }
+
+// var googleIdToken = require('google-id-token')
+// var parser = new googleIdToken({ getKeys: getGoogleCerts });
+
+	app.post('/login/gplus', function(req, res) {
+		console.log("Login with Google+ token");
+
+		var body = _.clone(req.body);
+		console.log(body);
+
+
+		var oauth2Client = new OAuth2(
+			config.get('gplus_server_client_id'), 
+			config.get('gplus_server_client_secret'), 
+			config.get('server_root')
+		);
+
+
+		// console.log('parser decoding');
+
+		// parser.decode(body.token, function(err, token) {
+		//     if(err) {
+		//         console.log("error while parsing the google token: " + err);
+		//     } else {
+		//         console.log("parsed id_token is:\n" + JSON.stringify(token));
+		//     }
+		// });
+
+		// return;
+
+		// // Retrieve tokens via token exchange explained above or set them:
+		// oauth2Client.tokenInfo(body.token, function(err, tokens) {
+		// 	if(err){
+		// 		console.log('Failed getToken');
+		// 		errorhandler(err, res);
+		// 		return;
+		// 	}
+
+		// 	console.log('Got tokens');
+		// 	console.log(tokens);
+
+		// 	errorhandler('ok');
+		// 	return;
+
+		// 	oauth2Client.setCredentials(tokens);
+
+		// 	plus.people.get({ userId: body.gplus_user_id, auth: oauth2Client }, function(err, gplusUser) {
+		// 		console.log(err);
+		// 		console.log(gplusUser);
+		// 	});
+
+		// 	errorhandler('might have succeeded', res);
+
+
+		// });
+
+		// return;
+		oauth2Client.setCredentials({
+		  access_token: body.token
+		  // refresh_token: body.refresh_token
+		});
+
+		plus.people.get({ userId: 'me', auth: oauth2Client }, function(err, gplusUser) {
+		    if(err || !gplusUser){
+		        errorhandler(err, res);
+		        return;
+		    }
+
+		    // Get user's email from gplus
+		    console.log('Response (GooglePlus user)');
+		    console.log(gplusUser);
+
+		    var email;
+
+		    // Attempt to get this user's actual email (that we SHOULD have access to via our access_token)
+		    // - seems to be broken on android, unable to have "email" permission from server somehow???
+		    try {
+		    	email = gplusUser.emails[0].value;
+		    }catch(err){
+		    	// Failed signing up gplus user, failed finding email
+
+		    	console.error("Failed finding valid email for user (scope requested did not include email)");
+
+		    	// ONLY DOING THIS TEMPORARILY!
+		    	// - we save the gplus_id, and then "trust" that whatever email is submitted, is a valid one
+		    	// - do this until we figure out how to authenticate more than just the fucking Google+ ID for a user with Scoping
+		    	email = body.email || '';
+
+		    	// errorhandler(err, res, 415);
+		    	// return;
+		    }
+
+		    email = email.toString().trim().toLowerCase();
+
+		    console.log('email:', email);
+
+		    // Get our gplus user id
+		    var userConditions = {};
+		    if(validateEmail(email)){
+		    	userConditions = {
+		    		email: email
+		    	};
+			} else {
+				// No email?
+				// - big problem for now, we NEED a valid email after making the request to google's auth api
+				errorhandler('Missing email for user, NOT available from auth api', res);
+				return;
+
+				// userConditions = { 
+				// 	'gplus_user.id': gplusUser.id
+				// };
+			}
+			m.User.findOne(userConditions, function(err, User) {
+					if(err){
+						errorhandler(err, res);
+						return;
+					}
+
+					// Found any existing user?
+					// - if NO: new signup! 
+					if(!User){
+						console.log('Creating a new user from Gplus account');
+
+					    var data = {
+							profile: {
+								name: gplusUser.displayName
+							},
+
+							gplus_token: body.token, // not storing expiration at the moment?
+							gplus_user: gplusUser,
+
+							email: email,
+							password: 'gplus', // bcrypt will never match this
+
+							active: 1
+						};
+						m.User.signup(data, res);
+						return;
+					}
+
+
+					// Already registered, log them in easily
+
+					// Build token
+					var access_token = models.serializer.stringify([
+						User._id, 
+						+new Date,
+						'v0.1']);
+
+					// Return token to user
+					res.json({
+						code: 200,
+						_id: User._id,
+						token: access_token,
+						websocket: models.Firebase.tokenGenerator.createToken({uid: User._id.toString()},{expires: moment().add(1,'year').unix()})
+					});
+
+					// // Update their friend list too
+					// FB.api('me/friends', {
+					//     appSecret: config.get('fb_app_secret'),
+					//     access_token: body.token
+					// }, function (friendRes) {
+					// 	if(friendRes.error || !friendRes.data){
+					// 		console.error('Failed updating user friends1');
+					// 		console.error(friendRes.error);
+					// 		return;
+					// 	}
+					// 	console.log('friendRes');
+					// 	console.log(friendRes);
+
+					// 	User.fb_friends = friendRes.data; // [] array of friend ids
+					// 	User.save(function(err, updatedUser){
+					// 		if(err){
+					// 			console.error('Failed updating user friends2');
+					// 			console.error(err);
+					// 			return;
+					// 		}
+
+					// 		console.log('updated friends ok');
+					// 	});
+					// });
+
+
+				}
+			);
+
+		});
 			
 	});
 
@@ -655,6 +1163,19 @@ module.exports = function(app) {
 
 			});
 			
+	});
+
+
+
+	app.post('/logut', function(req, res) {
+		
+		// Clears the Android/iOS tokens for a user
+		// - so we stop sending Push Notifications to them
+
+		checkUserAuth(req, res)
+			.then(function(user){
+
+			});
 	});
 
 	app.get('/users', function(req, res) {

@@ -18,4 +18,4 @@ var schema = Schema({
 
 var relationshipModel = mongoose.model('relationship_codes', schema);
 
-exports.relationshipModel = relationshipModel;
+exports.Model = relationshipModel;

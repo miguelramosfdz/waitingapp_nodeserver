@@ -27,4 +27,4 @@ var schema = Schema({
 
 });
 
-exports.mediaModel = mongoose.model('media', schema);
+exports.Model = mongoose.model('media', schema);

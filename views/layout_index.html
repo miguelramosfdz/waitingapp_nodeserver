@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<meta name="generator" content="HTML Tidy for Linux/x86 (vers 25 March 2009), see www.w3.org" />
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="description" content="Waiting">
+    <title>Waiting</title>
+  	<meta property="og:url" content="http://famousmobileapps.com">
+  	<meta property="og:title" content="Waiting">
+
+	<!-- Bootstrap core CSS -->
+	<link href="/css/bootstrap.min.css" rel="stylesheet">
+
+	<!-- Custom styles for this template -->
+	<link href="/css/index.css" rel="stylesheet">     
+ 
+</head>
+
+<body>
+    {% block body %}{% endblock %}
+
+	<script type="text/javascript">
+
+		var isMobile = {
+			Android: function() {
+					return /Android/i.test(navigator.userAgent);
+			},
+			iOS: function() {
+					return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+			},
+			any: function() {
+					return (isMobile.Android() || isMobile.iOS());
+			}
+		};
+		
+		// Hide/show download links accordingly
+		if(isMobile.any()){
+			document.querySelector(".hide-on-wrong-device").style.display = 'none';
+			if(isMobile.Android()){
+				document.querySelector(".android").style.display = 'block';
+			}
+			if(isMobile.iOS()){
+				document.querySelector(".ios").style.display = 'block';
+			}
+		}
+
+	</script>
+	
+</body>
+</html>

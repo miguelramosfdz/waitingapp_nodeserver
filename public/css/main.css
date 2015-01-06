@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Base Styles and Bootstrap Modifications
+   ========================================================================== */
+
+html,
+button,
+input,
+select,
+textarea {
+    color: #222;
+}
+
+html,
+body {
+    height: 100%;
+    font-family: "Lato";
+    font-weight: 300;
+    font-size: 16px;
+    color: #555;
+    -webkit-font-smoothing: antialiased;
+    -webkit-overflow-scrolling: touch;
+}
+
+body {
+    font-size: 1em;
+    line-height: 1.4;
+	padding-top: 65px; 
+}
+
+h1 {
+	font-weight: 200;
+}
+
+p {
+	margin: 0;
+}
+
+hr {
+	margin-top: 20px;
+	margin-bottom: 20px;
+	border: 0;
+	border-top: 1px solid #eee;
+}
+
+/* Navbar */
+.navbar-default {
+	background-color: #D60000;	
+}
+
+.navbar-default .navbar-brand {
+	color: #FFF;
+	font-weight: 600;
+}
+
+.navbar-default .navbar-brand:hover {
+	color: #FFF;
+	font-weight: 600;
+}
+
+.navbar-default .navbar-nav > li > a {
+	color: #FFF;
+	font-weight: 400;
+}
+
+.navbar-default .navbar-nav > li > a:hover, 
+.navbar-default .navbar-nav > li > a:focus {
+	color: #FFF;
+	font-weight: 600;
+}
+
+.navbar-default .navbar-text {
+	color: #FFF;
+	font-weight: 200;
+	margin-left: 3px;
+	margin-right: 3px;
+}
+
+
+/* Profile */
+.profile {
+	margin-top: 30px;
+	font-size: 24px;
+	font-weight: light;
+}
+
+.middle {
+    display: inline-block;
+    vertical-align: middle;
+    float: none;
+}
+
+
+/* Call to Action - Login or Sign Up */
+.call-to-action-wrapper {
+	padding-top: 30px;	
+}
+
+.call-to-action {
+	background-color: #D60000;
+	color: #FFF;
+	font-size: 20px;
+	padding: 10px;	
+	text-align: center;
+}
+
+.call-to-action a {
+	color: #FFF;
+	font-weight: 400;
+}
+
+.view-webapp {
+	display: inline-block;
+	padding: 4px;
+	margin-top: 8px;
+	background: rgba(255,255,255,0.2);
+	border: 1px solid #fafafa;
+	border-radius: 3px;
+	-webkit-border-radius: 3px;
+}
+
+/* Wishlist items */
+.gift-list {
+	padding-top: 50px;
+}
+
+.gift-item {
+}
+
+.gift-item img {
+	width: 100%;
+	height: 100%;	
+	padding-top: 5px;
+}
+
+.gift-item-separtor {
+	width: 100%;
+	height: 1px;
+	background: #999;
+	opacity: .3;
+}
+
+/* Footer */
+.footer {
+	padding-top: 150px;
+	padding-bottom: 30px;
+}

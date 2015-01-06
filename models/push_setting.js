@@ -11,8 +11,11 @@ var schema = Schema({
 
   scheme: {
 
-    new_friend: { type: Boolean, default: true },
+    testpush: { type: Boolean, default: true },
+
+    new_connection: { type: Boolean, default: true },
     new_message: { type: Boolean, default: true },
+
 
   },
 
@@ -21,6 +24,4 @@ var schema = Schema({
 
 });
 
-var pushSettingModel = mongoose.model('push_settings', schema);
-
-exports.pushSettingModel = pushSettingModel;
+exports.Model = mongoose.model('push_settings', schema);

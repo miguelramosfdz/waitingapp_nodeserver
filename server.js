@@ -4,22 +4,42 @@ var _ 		= require('underscore'),
 	fs 		= require('fs'),
 
 	nconf = require('nconf');
-	nconf.env().argv();
-	nconf.file('./config.json');
+nconf.env().argv();
+nconf.file('./config.json');
 
 GLOBAL.config = nconf;
 
-	Q 		= require('q'),
+var	Q 		= require('q'),
 	urlLib 	= require('url'),
 	moment 	= require('moment'), // moment.js (date parsing/formatting)
 	ObjectID = require('mongojs').ObjectId,
 	express = require('express'),
 	models 	= require('./models/models.js'),
+	nunjucks = require('nunjucks'),
 	path 	= require('path'),
 	m 		= require('./models'), // index.js gets loaded automatically
 	serializer = require('serializer'),
-	default_serializer = serializer.createSecureSerializer(nconf.get('serializer_key'), nconf.get('serializer_secret'));
+	default_serializer = serializer.createSecureSerializer(config.get('serialize_key'), config.get('serialize_secret'));
 
+var hour = 3600000;
+var day = hour * 24;
+var week = day * 7;
+
+var flash = require('connect-flash');
+
+
+// var MemcachedStore = require('connect-memcached')(express);
+
+// var tesseract = require('node-tesseract');
+// // Recognize text of any language in any format
+// tesseract.process(__dirname + '/redid.jpg',function(err, text) {
+//     if(err) {
+//         console.error(err);
+//     } else {
+//     	console.log('tesseract');
+//         console.log(text);
+//     }
+// });
 
 // Create the "uploads" folder if it doesn't exist
 fs.exists(__dirname + '/uploads', function (exists) {
@@ -38,10 +58,27 @@ fs.exists(__dirname + '/uploads', function (exists) {
 
 var app = express();
 
+
 // GLOBALS
 GLOBAL.models = models;
 GLOBAL.app = app;
 GLOBAL.m = m;
+
+GLOBAL.errorhandler = function(err, res, status_code, msg){
+	status_code = status_code || 500;
+	if(msg){
+		console.error(msg);
+	}
+	console.error(err);
+	if(res){
+		res.status(status_code);
+		res.json({
+			msg: msg
+		});
+	}
+	return;
+};
+GLOBAL.errorHandler = errorhandler;
 
 // cross-domain middleware
 var allowCrossDomain = function(req, res, next) {
@@ -75,7 +112,15 @@ var getRawBody = function(req, res, next) {
 app.configure(function(){
 	// app.set('port', process.env.PORT || 8088);
 	app.set('views', __dirname + '/views');
-	app.set('view engine', 'jade');
+
+	nunjucks.configure('views', {
+	    autoescape: true,
+	    express: app
+	});
+	app.set('view engine', 'html');
+
+	// app.set('view engine', 'jade');
+	// app.engine('tpl', require('hbs').__express);
 
 	app.use(allowCrossDomain);
 	// app.use(express.favicon());
@@ -87,6 +132,21 @@ app.configure(function(){
 	// app.use(express.methodOverride());
 	app.use(express.cookieParser('testkey'));
 	
+	app.use(express.session({ 
+		secret: config.get('session_secret'),
+		cookie: { maxAge: 60000 }
+	}));
+	app.use(flash());
+
+	app.use(function(req, res, next) {
+	  // Keep track of previous URL to redirect back to
+	  // original destination after a successful login.
+	  if (req.method !== 'GET') return next();
+	  var path = req.path.split('/')[1];
+	  if (/(auth|login|logout|signup)$/i.test(path)) return next();
+	  req.session.returnTo = req.path;
+	  next();
+	});
 
 	// app.use(express.session({ 
 	// 	secret: creds.session_secret
@@ -100,7 +160,7 @@ app.configure(function(){
 	// });
 
 	// app.use(require('stylus').middleware(__dirname + '/public'));
-	app.use(express.static(path.join(__dirname, 'public')));
+	app.use(express.static(path.join(__dirname, 'public'), { maxAge: week }));
 
 	// app.use(app.router);
 	// // app.use(flash());
@@ -114,109 +174,15 @@ app.configure(function(){
 
 });
 
-
-require('./routes')(app);
-
-
-
-app.get('/push/:type/:id', function(req, res){
-	// accepts a push registration id
-	var id = req.params.id,
-		type = req.params.type;
-
-		// trip: 5286948e6a137bc9d3c5049c
-		// driver: 527fe36f24275af251000003
-
-	// console.log('Push id');
-	// console.log(push_id);
-
-	var objToSend = {
-						'message':'Vehicle trip ended',
-						'title' : 'Trip Just Ended',
-						'type': 'trip',
-						'_id': '5286948e6a137bc9d3c5049c'
-					};
-
-	switch(type){
-		case 'trip':
-			objToSend.message = 'Nick just got Home with the Pathfinder';
-			objToSend.title = 'Trip recently ended';
-			break;
-		case 'driver':
-			objToSend.message = 'Girlfriend is now driving the Pathfinder';
-			objToSend.title = 'Driving Girlfriend in Pathfinder';
-			break;
-		default:
-			res.json('fuckity');
-			return;
-	}
-
-	// other items
-	objToSend.type = type;
-	objToSend._id = id;
-
-	console.log(' ');
-	console.log('objToSend');
-	console.log(objToSend);
-
-	var collection = models.mongo.collection('users');
-	collection.find({email: 'nicholas.a.reed@gmail.com'}).toArray(function(err, items) {
-		// console.log(items);
-		if(!items || typeof items == undefined || items.length < 1){
-			res.status(403);
-			res.json(false);
-			return;
-		} else {
-			// Found all users
-			// - iterate over them
-
-			var user = items[0];
-
-			if(!user.android){
-				console.log(user);
-				res.json('no android');
-				return;
-			}
-			
-			var push_id = user.android[0].reg_id;
-			console.log('Push ID');
-			console.log(push_id);
-			models.pushToAndroid(
-					push_id, // registration id of android device
-					// data
-					objToSend,
-					'NemesisNotifications', // collapseKey
-					60, // timeToLive (expire_time basically)
-					5 // retries
-				)
-				.then(function(result){
-					console.log('result');
-					console.log(result);
-					res.json(result);
-				});
-		}
-	});
-
-
-
-});
-
-
-
-
-// app.get('/trips', function(req, res) {
-// 	console.log("Finding all items for trips db");
-
-// 	checkUserAuth(req, res)
-// 		.then(function(user){
-// 			var collection = models.mongo.collection('trips');
-// 			collection.find({user_id : user._id}).toArray(function(err, items) {
-// 				res.json(items);
-// 			});
-// 		});
-
+// app.all('/p*', function(req, res, next){
+// 	console.log('-------------------PUBLIC-------------------');
+// 	app.use(express.session({ cookie: { maxAge: 60000 }}));
+// 	app.use(flash());
+// 	next();
 // });
 
+
+require('./routes')(app);
 
 
 
@@ -236,41 +202,51 @@ GLOBAL.checkUserAuth = function(req, res, suppliedToken){
 	}
 	try {
 		// Parse token
-		var token_data = default_serializer.parse(atok.toString()),
-			user_id = token_data[0],
+		try {
+			var token_data = default_serializer.parse(atok.toString())
+		}catch(errToken){
+			console.error('token error');
+			console.log(errToken);
+			errorhandler(errToken, res, 403);
+			defer.reject();
+			return defer.promise;
+		}
+		var	user_id = token_data[0],
 			issue_timestamp = token_data[1],
 			version = token_data[2];
 
 			// Find this user
-			m.User.find(
+			m.User.findOne(
 			{ 
 				_id: user_id,
 			},
-			function(err, items) {
+			function(err, User) {
 				// console.log(items);
-				if(!items || typeof items == undefined || items.length < 1){
-					// defer.resolve(false);
-					console.log('Unable to find user in checkUserAuth newer');
-					// console.log('MASS FAIL');
-					console.log(items);
-					console.log(typeof items);
+				if(err){
+					errorhandler(err, res);
 					defer.reject();
-					res.status(403);
-					res.json(false);
-				} else {
-					defer.resolve(items[0]);
+					return;
 				}
+				if(!User){
+					errorhandler('Invalid login credentials', res, 403, 'Invalid login credentials');
+					return;
+				}
+
+				// setTimeout(function(){
+				// 	console.log('trying remote update');
+				// 	m.User.updateRemote(User._id);
+				// },2000);
+					
+				// all good
+				defer.resolve(User);
 			}
 		);
 
 		
 	}catch(err){
 		// Failed auth
-		console.error('failed authentication');
-		console.error(err);
-		defer.reject();
-		res.status(403);
-		res.json(false);
+		console.log('Failed auth, outside try...catch');
+		errorhandler(err, res, 500);
 	}
 
 	return defer.promise;
@@ -285,7 +261,7 @@ GLOBAL.validateEmail = function(email){
 }
 
 GLOBAL.randomString = function(length) {
-	var chars = '23456789ABCDEFGHJKLMNOPQRSTUVWXTZabcdefghikmnpqrstuvwxyz';
+	var chars = '23456789ABCDEFGHJKMNPQRSTUVWXTZabcdefghkmnpqrstuvwxyz';
 	length = length ? length : 32;
 
 	var string = '';
@@ -296,6 +272,10 @@ GLOBAL.randomString = function(length) {
 	}
 
 	return string;
+}
+
+GLOBAL.getRandomInt = function(min,max) {
+	 return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 GLOBAL.guid = function() {

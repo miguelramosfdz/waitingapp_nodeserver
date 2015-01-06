@@ -5,9 +5,10 @@ var mongoose = require("mongoose"),
 
 // mongoose.set('debug', true);
 
-// mongoose.connection.on('error', function (err) {
-//   console.log('MONGO ERROR');
-// });
+mongoose.connection.on('error', function (err) {
+  console.log('MONGO ERROR');
+  console.error(err);
+});
 // mongoose.connection.on('connected', function (err) {
 //   console.log('MONGO connect');
 // });
@@ -30,25 +31,20 @@ mongoose.connect(mongoDbUrl, function(err){
     else console.log('MongoDB: successfully connected');
 });
 
-// exports.Action = require('./action').actionModel;
-// exports.Feed = require('./feed').feedModel;
-// exports.Game = require('./game').gameModel;
-// exports.GameStar = require('./game_star').gameStarModel;
-// exports.Log = require('./log').logModel;
-exports.Media = require('./media').mediaModel;
+
+exports.Friend = require('./friend').Model;
+
+exports.Invite = require('./invite').Model;
+
+exports.KeyValue = require('./key_value').Model;
+
+exports.Media = require('./media').Model;
 exports.Message = require('./message').Model;
 
-exports.PushNotification = require('./push_notification').pushModel;
-exports.PushSetting = require('./push_setting').pushSettingModel;
-exports.PushSettingMod = require('./push_setting_mod').pushSettingModModel;
-
-exports.RelationshipCode = require('./relationship_code').relationshipModel;
-
-// exports.Player = require('./player').playerModel;
-// exports.Notification = require('./notification').notificationModel;
-// exports.PushNotification = require('./push_notification').pushModel;
-// exports.RelationshipCode = require('./relationship_code').relationshipModel;
-// exports.Sport = require('./sport').sportModel;
-// exports.Story = require('./story').storyModel;
-// exports.StoryTemplate = require('./story_template').storyTemplateModel;
-exports.User = require('./user').userModel;
+exports.PaymentCharge = require('./payment_charge').Model; // not used yet
+exports.PaymentSource = require('./payment_source').Model;
+exports.PushNotification = require('./push_notification').Model;
+exports.PushSetting = require('./push_setting').Model;
+exports.PushSettingMod = require('./push_setting_mod').Model;
+exports.RelationshipCode = require('./relationship_code').Model;
+exports.User = require('./user').Model;

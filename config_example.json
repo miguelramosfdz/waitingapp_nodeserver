@@ -1,11 +1,65 @@
 {
-    "serialize_key" : "",
-    "serialize_secret" : "",
 
-    "mongo_string" : "",
+    "app_name" : "",
+    
+    "server_root" : "",
+    "_server_root" : "",
 
-    "gcm_sender_id" : "",
+    "server_media_root" : "",
 
-    "stripe_api_key" : ""
+    "serialize_key": "",
+    "serialize_secret": "",
+
+    "mongo_string" : "mongodb://user:password@domainhere.mongolab.com:port/dbname",
+    "mongo_options" : {
+    },
+
+    "aws_access_key" : "",
+    "aws_access_secret" : "",
+
+    "transloadit_key" : "",
+    "transloadit_secret" : "",
+
+    "aws_bucket_photos" : "",
+    
+    "ios_push_notification_mode" : "",
+    "apn_prod_key_password" : "",
+    "apn_dev_key_password" : "",
+
+    "gcm_sender_api_key": "",
+
+    "firebase_url" : "https://.firebase.io",
+    "firebase_secret" : "",
+
+    "admin_email_from" : "",
+    
+    "send_email" : true,
+    "sendgrid_username" : "",
+    "sendgrid_password" : "",
+
+    "sendwithus_api_key" : "",
+    "swu_signup_template" : "",
+
+    "mailgun_domain" : "",
+    "_mailgun_domain" : "",
+    "mailgun_key_secret" : "",
+    "mailgun_key_public" : "",
+
+    "stripe_mode" : "test",
+    "stripe_api_key_secret_prod": "",
+    "stripe_api_key_secret_test": "",
+
+    "stripe_api_key_publishable_prod" : "",
+    "stripe_api_key_publishable_test" : "",
+
+    "fb_app_name" : "",
+    "fb_app_id" : "",
+    "fb_app_secret" : "",
+
+    "gplus_scopes" : ["email"],
+    "gplus_server_client_id" : "",
+    "gplus_server_client_secret" : "",
+
+    "session_secret" : ""
 
 }

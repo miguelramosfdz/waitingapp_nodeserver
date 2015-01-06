@@ -7,21 +7,16 @@ var Q = require('q');
 
 var schema = Schema({
 
-  user_id: { type: ObjectId, ref: 'users' },
+  user_id: { type: ObjectId, ref: 'users' }, // user it was sent FROM
+  email: { type: String, lowercase: true }, // user's email it was sent TO
 
-  scheme_key: String,
-  scheme_value: Boolean, // true|false
-
-  // // Optional, one may match
-  // event_id: ObjectId,
-  // game_id: ObjectId,
-  // spot_id: ObjectId,
+  active: { type: Boolean, default: true },
 
   created: { type: Date, default: Date.now },
   modified: { type: Date, default: Date.now }
 
 });
 
-var Model = mongoose.model('push_setting_mods', schema);
+var Model = mongoose.model('invites', schema);
 
 exports.Model = Model;

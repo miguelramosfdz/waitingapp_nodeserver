@@ -1,0 +1,41 @@
+{% extends "layout_index.html" %}
+
+{% block body %}
+
+
+<div class="BigW img-responsive">
+	<!-- Main content container -->
+	<div class="container">
+		<div class="row content centered">
+				<h1>Waiting</h1>
+				<h2>Start Something</h2>		
+		</div>
+		
+		<div class="row download centered">			
+			<!-- based on useragent, show android for android, ios for ios, otherwise both. -->
+			<div class="hide-on-wrong-device ios">
+				<a href="/"><img src="/img/ios_link.png"></a>
+			</div>
+			<div class="hide-on-wrong-device android">
+				<a href="https://play.google.com/store/apps/details?id=com.waiting.app.pub"><img class="" src="/img/android_link.png"></a>
+			</div>
+						
+		</div>
+	</div>
+	
+	<footer class="footer">
+		<div class="container">
+			<p class="left">Waiting App</p>
+			<p id="copyright">&copy; 2015</p>
+		</div>
+	</footer>
+</div>
+	
+<!-- Bootstrap core JavaScript
+================================================== -->
+<!-- Placed at the end of the document so the pages load faster -->
+	
+
+<script type="text/javascript" src="/js/bootstrap.min.js"></script>
+
+{% endblock %}
