@@ -6,9 +6,7 @@ var Schema = mongoose.Schema,
 
 var schema = Schema({
 
-  player_id: { type: ObjectId, red: 'players' },
   user_id: { type: ObjectId, ref: 'users' },
-  game_id: { type: ObjectId, ref: 'games' },
 
   assembled: { type: Boolean },
   assembly_id: { type: String },
