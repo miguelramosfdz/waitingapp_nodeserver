@@ -3,6 +3,13 @@
 var mongoose = require("mongoose"),
 	mongoDbUrl = config.get('mongo_string');
 
+console.log('Using config.get for sendgrid');
+
+if(process.env.MONGOLAB_URI){
+	console.log('Using environment var for MongoLab');
+	mongoDbUrl = process.env.MONGOLAB_URI;
+}
+
 // mongoose.set('debug', true);
 
 mongoose.connection.on('error', function (err) {
@@ -48,3 +55,4 @@ exports.PushSetting = require('./push_setting').Model;
 exports.PushSettingMod = require('./push_setting_mod').Model;
 exports.RelationshipCode = require('./relationship_code').Model;
 exports.User = require('./user').Model;
+
