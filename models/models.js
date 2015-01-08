@@ -13,6 +13,7 @@ exports.serializer = serializer.createSecureSerializer(config.get('serialize_key
 var sendgrid_username = config.get('sendgrid_username'),
 	sendgrid_password = config.get('sendgrid_password');
 if(process.env.SENDGRID_USERNAME){
+	console.log('Using environment var for sendgrid');
 	sendgrid_username = process.env.SENDGRID_USERNAME;
 	sendgrid_password = process.env.SENDGRID_PASSWORD;
 } else {
