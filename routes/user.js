@@ -444,11 +444,12 @@ module.exports = function(app) {
 				models.email.send({
 					to: user.email,
 					from: config.get('admin_email_from'),
-					subject: 'Reset your password on ' + config.get('app_name'),
-					text: 'You are receiving this email because you (or someone else) have requested the reset of the password for your account.\n\n' +
-				      'Please click on the following link, or paste this into your browser to complete the process:\n\n' +
-				      config.get('server_root') + 'reset/' + token + '\n\n' +
-				      'If you did not request this, please ignore this email and your password will remain unchanged.\n'
+					swu_template: config.get('swu_tpl_resetpass'),
+					data: {
+						config: swuConfig(),
+						url: config.get('server_root') + 'reset/' + token
+					}
+
 				});
 
 				console.log('reset url: ',config.get('server_root') + 'reset/' + token);
@@ -522,9 +523,11 @@ module.exports = function(app) {
 			models.email.send({
 				to: user.email,
 				from: config.get('admin_email_from'),
-				subject: 'Your '+ config.get('app_name') +' password has been changed',
-				text: 'Hello,\n\n' +
-          			'This is a confirmation that the password for your account ' + user.email + ' has just been changed.\n'
+				swu_template: config.get('swu_tpl_resetpass_confirm'),
+				data: {
+					config: swuConfig(),
+					email: user.email
+				}
 			});
 
 			done(null);
