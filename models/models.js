@@ -23,32 +23,14 @@ if(process.env.SENDGRID_USERNAME){
 var sendgrid = require('sendgrid')(sendgrid_username, sendgrid_password);
 
 
-// Send with us Email Templates (another way of emailing
+// Email
 var swu = require('sendwithus')
 var swu_api = swu(config.get('sendwithus_api_key'));
 
 exports.email = {
-	swu: {
-		send: function(){
-			// send via SendWithUs template
-			swu_api.send({
-				email_id: 'tem_L9FMpAqRKChfcCHDkzyhqA',
-				recipient: { 
-					address: newSendObj.to
-				},
-				sender: {
-					address: newSendObj.from
-				},
-				email_data: {
-					first_name: 'your name here',
-					button_text: 'boring text...'
-				}
-			});
-		}
-	},
 	send: function(sendObj){
 
-		// console.log('passed in sendObj', sendObj);
+		console.log('passed in sendObj', sendObj);
 
 		var newSendObj = {
 			to: '',
@@ -78,7 +60,8 @@ exports.email = {
 				email_data: sendObj.data
 			},function(err, data){
 				if (err) {
-			        console.log('SendWithUs error', err, err.statusCode);
+			        console.log('SendWithUs error:', err.statusCode);
+			        console.error(err)
 			    } else {
 			    	console.log('SendWithUs Result');
 			        console.log(data);
@@ -87,7 +70,7 @@ exports.email = {
 			return;
 		}
 
-		// Using a local template?
+		// Using a template?
 		var onTemplate = Q.defer();
 		if(sendObj.template){
 			// HTML
@@ -128,16 +111,19 @@ exports.email = {
 
 		});
 	},
+	
 	signup_email: function(newUser){
 		// 
 
-		// send via swu
+		// send signup email
 		models.email.send({
 			to: newUser.email, //config.get('admin_email_from'),
 			from: config.get('admin_email_from'),
-			swu_template: 'tem_rEmwEZKTUjizcuMyR72CiK',
+			// subject: 'Welcome to ' + config.get('app_name'),
+
+			swu_template: config.get('swu_tpl_welcome'),
 			data: {
-				config: config.get(),
+				config: swuConfig(),
 				user: newUser
 			}
 		});
