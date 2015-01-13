@@ -290,6 +290,11 @@ GLOBAL.guid = function() {
   };
 };
 
+GLOBAL.swuConfig = function(){
+	var keys = ['app_name','server_root','server_media_root'];
+	return _.pick(config.get(),keys);
+}
+
 var port = process.env.PORT || 3000;
 console.log(process.env.PORT);
 app.listen(port);
