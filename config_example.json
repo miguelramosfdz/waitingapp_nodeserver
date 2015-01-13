@@ -38,7 +38,10 @@
     "sendgrid_password" : "",
 
     "sendwithus_api_key" : "",
-    "swu_signup_template" : "",
+    "swu_tpl_welcome" : "",
+    "swu_tpl_invite" : "",
+    "swu_tpl_resetpass" : "",
+    "swu_tpl_resetpass_confirm" : "",
 
     "mailgun_domain" : "",
     "_mailgun_domain" : "",
