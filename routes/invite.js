@@ -176,13 +176,11 @@ module.exports = function(app) {
 				});
 
 				// Does this email already belong to somebody?
-				// - send them an email asking them to check out the Wishlist
-
+				
 				console.log('SENDING EMAIL');
 
 
 				// Get the user's Media
-				// - all active wishes will go here
 				var mediaConditions = {
 					user_id: user._id,
 					active: true
@@ -198,8 +196,8 @@ module.exports = function(app) {
 					models.email.send({
 						to: email,
 						from: user.email,
-						subject: 'View my Media',
-						template: 'invite',
+
+						swu_template: config.get('swu_tpl_invite'), // View my media!
 						data: {
 							config: config.get(), // all variables!
 							user: user.toJSON(),
