@@ -57,8 +57,14 @@ module.exports = function(app) {
 				// return to transloadit client
 				console.log('Success modifying Media');
 				console.log(newMedia);
+				
 				res.send(200);
-				// res.json(newMedia);
+
+				if(newMedia.user_id){
+					// Update remote devices/users
+					m.User.updateRemote(newMedia.user_id);
+				}
+
 			});
 
 		});
