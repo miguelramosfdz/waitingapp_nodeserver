@@ -8,16 +8,13 @@ module.exports = function(app) {
     res.render("support", { pageTitle: config.get('app_name')});
   });
 
-  // require('./action')(app);
   
   require('./invite')(app);
   require('./friend')(app);
-
   require('./media')(app);
   require('./message')(app);
   require('./payment_source')(app);
   require('./push')(app);
-  // require('./notification')(app);
   require('./relationship_code')(app);
   require('./user')(app);
   require('./webhook')(app);
