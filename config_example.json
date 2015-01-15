@@ -32,6 +32,7 @@
     "firebase_secret" : "",
 
     "admin_email_from" : "",
+    "admin_email_signup_notify" : [],
     
     "send_email" : true,
     "sendgrid_username" : "",
@@ -39,6 +40,7 @@
 
     "sendwithus_api_key" : "",
     "swu_tpl_welcome" : "",
+    "swu_tpl_user_sign_up_admin_notify" : "",
     "swu_tpl_invite" : "",
     "swu_tpl_resetpass" : "",
     "swu_tpl_resetpass_confirm" : "",
