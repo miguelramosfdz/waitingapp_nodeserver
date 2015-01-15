@@ -293,7 +293,30 @@ GLOBAL.guid = function() {
 GLOBAL.swuConfig = function(){
 	var keys = ['app_name','server_root','server_media_root'];
 	return _.pick(config.get(),keys);
-}
+};
+
+GLOBAL.swuUser = function(User){
+	// returns a pruned user
+
+	var tmpUser = JSON.parse(JSON.stringify(User));
+
+	var allowed = [
+		'_id',
+		'email',
+		'profilephoto',
+		'profile',
+		'last_gift_update'
+	];
+
+	var returnObj = {};
+	_.each(allowed, function(key){
+		if(tmpUser[key] != undefined){
+			returnObj[key] = tmpUser[key];
+		}
+	});
+
+	return returnObj;
+};
 
 var port = process.env.PORT || 3000;
 console.log(process.env.PORT);
