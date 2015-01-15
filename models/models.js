@@ -111,23 +111,38 @@ exports.email = {
 
 		});
 	},
-	
+
 	signup_email: function(newUser){
 		// 
 
-		// send signup email
+		// send signup email to user
 		models.email.send({
-			to: newUser.email, //config.get('admin_email_from'),
+			to: newUser.email,
 			from: config.get('admin_email_from'),
-			// subject: 'Welcome to ' + config.get('app_name'),
 
 			swu_template: config.get('swu_tpl_welcome'),
 			data: {
 				config: swuConfig(),
-				user: newUser
+				user: swuUser(newUser)
 			}
 		});
+
+		// Notify admin users as well
+		config.get('admin_email_signup_notify').forEach(function(adminEmail){
+			models.email.send({
+				to: adminEmail,
+				from: config.get('admin_email_from'),
+
+				swu_template: config.get('swu_tpl_user_sign_up_admin_notify'),
+				data: {
+					config: swuConfig(),
+					user: swuUser(newUser)
+				}
+			});
+		});
+
 	}
+	
 };
 
 
